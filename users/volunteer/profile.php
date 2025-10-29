@@ -33,7 +33,9 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - <?php echo SITE_NAME; ?></title>
-    <style>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <!-- <style>
         * {
             margin: 0;
             padding: 0;
@@ -196,12 +198,12 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
             background: #d4edda;
             color: #155724;
         }
-    </style>
+    </style>-->
 </head>
 <body>
     <div class="header">
         <div class="header-content">
-            <h1><?php echo SITE_NAME; ?> - Volunteer</h1>
+            <h1><span class="logo-emoji">🤝</span><?php echo SITE_NAME; ?> - Volunteer</h1>
             <div class="header-links">
                 <a href="v_dashboard.php">Dashboard</a>
                 <a href="../../logout.php">Logout</a>

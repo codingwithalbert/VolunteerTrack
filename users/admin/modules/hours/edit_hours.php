@@ -44,7 +44,13 @@ $volunteers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $volunteer_id = $_POST['volunteer_id'];
     $activity_id = $_POST['activity_id'];
-    $hours_worked = $_POST['hours_worked'];
+    $hours_input = trim($_POST['hours_worked']);
+    if (strpos($hours_input, ':') !== false) {
+        list($h, $m) = array_map('intval', explode(':', $hours_input));
+        $hours_worked = $h + ($m / 60);
+    } else {
+        $hours_worked = floatval($hours_input);
+    }
     $work_date = $_POST['work_date'];
     $description = trim($_POST['description']);
     $status = $_POST['status'];
@@ -54,44 +60,90 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif ($hours_worked <= 0 || $hours_worked > 24) {
         $error = 'Hours must be between 0 and 24';
     } else {
-        // Update verified info if status changed to verified or rejected
-        if (($status == 'verified' || $status == 'rejected') && $hour['status'] == 'pending') {
-            $query = "UPDATE hours SET volunteer_id = :volunteer_id, activity_id = :activity_id, 
-                      hours_worked = :hours_worked, work_date = :work_date, description = :description, 
-                      status = :status, verified_by = :verified_by, verified_at = NOW() 
+        // Handle status updates properly
+        if ($status == 'verified' || $status == 'rejected') {
+            // Verified or rejected: mark verifier
+            $query = "UPDATE hours 
+                      SET volunteer_id = :volunteer_id, 
+                        activity_id = :activity_id, 
+                        hours_worked = :hours_worked, 
+                        work_date = :work_date, 
+                        description = :description, 
+                        status = :status, 
+                        verified_by = :verified_by, 
+                        verified_at = NOW() 
                       WHERE hour_id = :hour_id";
+
             $stmt = $db->prepare($query);
+        
             $verified_by = getUserId();
+        
+            $stmt->bindParam(':volunteer_id', $volunteer_id);
+            $stmt->bindParam(':activity_id', $activity_id);
+            $stmt->bindParam(':hours_worked', $hours_worked);
+            $stmt->bindParam(':work_date', $work_date);
+            $stmt->bindParam(':description', $description);
+            $stmt->bindParam(':status', $status);
             $stmt->bindParam(':verified_by', $verified_by);
-        } else {
-            $query = "UPDATE hours SET volunteer_id = :volunteer_id, activity_id = :activity_id, 
-                      hours_worked = :hours_worked, work_date = :work_date, description = :description, 
-                      status = :status WHERE hour_id = :hour_id";
-            $stmt = $db->prepare($query);
-        }
-        
-        $stmt->bindParam(':volunteer_id', $volunteer_id);
-        $stmt->bindParam(':activity_id', $activity_id);
-        $stmt->bindParam(':hours_worked', $hours_worked);
-        $stmt->bindParam(':work_date', $work_date);
-        $stmt->bindParam(':description', $description);
-        $stmt->bindParam(':status', $status);
-        $stmt->bindParam(':hour_id', $hour_id);
-        
-        if ($stmt->execute()) {
-            $success = "Hours updated successfully!";
-            // Refresh data
-            $query = "SELECT * FROM hours WHERE hour_id = :hour_id";
-            $stmt = $db->prepare($query);
             $stmt->bindParam(':hour_id', $hour_id);
-            $stmt->execute();
-            $hour = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        } elseif ($status == 'pending') {
+            // Reset to pending: clear verifier info
+            $query = "UPDATE hours 
+                      SET volunteer_id = :volunteer_id, 
+                        activity_id = :activity_id, 
+                        hours_worked = :hours_worked, 
+                        work_date = :work_date, 
+                        description = :description, 
+                        status = 'pending', 
+                        verified_by = NULL, 
+                        verified_at = NULL 
+                      WHERE hour_id = :hour_id";
+
+            $stmt = $db->prepare($query);
+        
+            $stmt->bindParam(':volunteer_id', $volunteer_id);
+            $stmt->bindParam(':activity_id', $activity_id);
+            $stmt->bindParam(':hours_worked', $hours_worked);
+            $stmt->bindParam(':work_date', $work_date);
+            $stmt->bindParam(':description', $description);
+            $stmt->bindParam(':hour_id', $hour_id);
+        
         } else {
-            $error = "Failed to update hours";
+            // Other statuses
+            $query = "UPDATE hours 
+                      SET volunteer_id = :volunteer_id, 
+                        activity_id = :activity_id, 
+                        hours_worked = :hours_worked, 
+                        work_date = :work_date, 
+                        description = :description, 
+                        status = :status 
+                      WHERE hour_id = :hour_id";
+
+            $stmt = $db->prepare($query);
+        
+            $stmt->bindParam(':volunteer_id', $volunteer_id);
+            $stmt->bindParam(':activity_id', $activity_id);
+            $stmt->bindParam(':hours_worked', $hours_worked);
+            $stmt->bindParam(':work_date', $work_date);
+            $stmt->bindParam(':description', $description);
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':hour_id', $hour_id);
         }
+
+        // Execute safely
+        if ($stmt->execute()) {
+            $_SESSION['success'] = "Hours updated successfully!";
+            header("Location: edit_hours.php?id=" . $hour_id);
+            exit();
+        } else {
+            $_SESSION['error'] = "Failed to update hours.";
+            header("Location: edit_hours.php?id=" . $hour_id);
+            exit();
+        }
+        
     }
 }
-
 $role = getUserRole();
 $dashboard = $role == 'coordinator' ? 'c_dashboard.php' : 'a_dashboard.php';
 $panel_name = $role == 'coordinator' ? 'Coordinator Panel' : 'Admin Panel';
@@ -102,7 +154,9 @@ $panel_name = $role == 'coordinator' ? 'Coordinator Panel' : 'Admin Panel';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Hours - <?php echo SITE_NAME; ?></title>
-    <style>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <!-- <style>
         * {
             margin: 0;
             padding: 0;
@@ -253,12 +307,12 @@ $panel_name = $role == 'coordinator' ? 'Coordinator Panel' : 'Admin Panel';
             color: #666;
             margin-top: 5px;
         }
-    </style>
+    </style> -->
 </head>
 <body>
     <div class="header">
         <div class="header-content">
-            <h1><?php echo SITE_NAME; ?> - <?php echo $panel_name; ?></h1>
+            <h1><span class="logo-emoji">🤝</span><?php echo SITE_NAME; ?> - <?php echo $panel_name; ?></h1>
             <div class="header-links">
                 <a href="../../<?php echo $dashboard; ?>">Dashboard</a>
                 <a href="../../../../logout.php">Logout</a>
@@ -272,12 +326,14 @@ $panel_name = $role == 'coordinator' ? 'Coordinator Panel' : 'Admin Panel';
             <a href="manage_hours.php" class="btn btn-secondary">Back to Hours</a>
         </div>
         
-        <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo $error; ?></div>
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="alert alert-success"><?php echo $_SESSION['success']; ?></div>
+            <?php unset($_SESSION['success']); ?>
         <?php endif; ?>
         
-        <?php if ($success): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="alert alert-error"><?php echo $_SESSION['error']; ?></div>
+            <?php unset($_SESSION['error']); ?>
         <?php endif; ?>
         
         <div class="card">
@@ -308,8 +364,9 @@ $panel_name = $role == 'coordinator' ? 'Coordinator Panel' : 'Admin Panel';
                 
                 <div class="form-group">
                     <label>Hours Worked <span class="required">*</span></label>
-                    <input type="number" name="hours_worked" step="0.5" min="0.5" max="24" required 
-                           value="<?php echo htmlspecialchars($hour['hours_worked']); ?>">
+                    <input type="text" name="hours_worked" required 
+                            value="<?php echo isset($_POST['hours_worked']) ? htmlspecialchars($_POST['hours_worked']) : ''; ?>"
+                            placeholder="Ex: 2:30 or 2.5">
                 </div>
                 
                 <div class="form-group">

@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - <?php echo SITE_NAME; ?></title>
-    <style>
+    <<style>
         * {
             margin: 0;
             padding: 0;
@@ -94,8 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             width: 100%;
             max-width: 500px;
             padding: 40px;
-            max-height: 90vh;
-            overflow-y: auto;
+            max-height: none;
+            overflow-y: visible;
         }
         
         .logo {
@@ -141,8 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
+            resize: none;
+            height: 46px;
+            line-height: 1.4;
+            overflow: hidden;
         }
         
         .form-group input:focus,
@@ -245,7 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             <div class="form-group">
                 <label for="address">Address</label>
-                <textarea id="address" name="address"><?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?></textarea>
+                <input type="text" id="address" name="address"
+                        value="<?php echo isset($_POST['address']) ? htmlspecialchars($_POST['address']) : ''; ?>">
             </div>
             
             <div class="form-group">

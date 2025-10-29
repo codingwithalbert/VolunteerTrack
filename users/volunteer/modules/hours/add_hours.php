@@ -18,7 +18,13 @@ $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $activity_id = $_POST['activity_id'];
-    $hours_worked = $_POST['hours_worked'];
+    $hours_input = trim($_POST['hours_worked']);
+    if (strpos($hours_input, ':') !== false) {
+        list($h, $m) = array_map('intval', explode(':', $hours_input));
+        $hours_worked = $h + ($m / 60);
+    } else {
+        $hours_worked = floatval($hours_input);
+    }
     $work_date = $_POST['work_date'];
     $description = trim($_POST['description']);
     
@@ -54,7 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log Hours - <?php echo SITE_NAME; ?></title>
-    <style>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!--<style>
         * {
             margin: 0;
             padding: 0;
@@ -209,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #666;
             display: none;
         }
-    </style>
+    </style> -->
     <script>
         function showActivityInfo() {
             const select = document.getElementById('activity_id');
@@ -234,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <div class="header">
         <div class="header-content">
-            <h1><?php echo SITE_NAME; ?> - Volunteer</h1>
+            <h1><span class="logo-emoji">🤝</span><?php echo SITE_NAME; ?> - Volunteer</h1>
             <div class="header-links">
                 <a href="../../v_dashboard.php">Dashboard</a>
                 <a href="../../../../logout.php">Logout</a>
@@ -280,9 +288,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     <div class="form-group">
                         <label>Hours Worked <span class="required">*</span></label>
-                        <input type="number" name="hours_worked" step="0.5" min="0.5" max="24" required 
+                        <input type="text" name="hours_worked" required 
                                value="<?php echo isset($_POST['hours_worked']) ? htmlspecialchars($_POST['hours_worked']) : ''; ?>"
-                               placeholder="e.g., 2.5">
+                               placeholder="Ex: 2:30 or 2.5">
                     </div>
                     
                     <div class="form-group">

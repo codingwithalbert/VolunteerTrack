@@ -44,7 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Activity - <?php echo SITE_NAME; ?></title>
-    <style>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!--<style>
         * {
             margin: 0;
             padding: 0;
@@ -189,12 +191,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             gap: 10px;
             margin-top: 30px;
         }
-    </style>
+    </style>-->
 </head>
 <body>
     <div class="header">
         <div class="header-content">
-            <h1><?php echo SITE_NAME; ?> - <?php echo getUserRole() == 'admin' ? 'Admin' : 'Coordinator'; ?> Panel</h1>
+            <h1><span class="logo-emoji">🤝</span><?php echo SITE_NAME; ?> - <?php echo getUserRole() == 'admin' ? 'Admin' : 'Coordinator'; ?> Panel</h1>
             <div class="header-links">
                 <a href="../../<?php echo getUserRole() == 'coordinator' ? 'c' : 'a'; ?>../../c_dashboard.php">Dashboard</a>
                 <a href="../../../../logout.php">Logout</a>
@@ -225,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <label>Activity Name <span class="required">*</span></label>
                     <input type="text" name="activity_name" required 
                            value="<?php echo isset($_POST['activity_name']) ? htmlspecialchars($_POST['activity_name']) : ''; ?>"
-                           placeholder="e.g., Community Cleanup">
+                           placeholder="Ex: Community Cleanup">
                 </div>
                 
                 <div class="form-group">
@@ -235,10 +237,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
                 
                 <div class="form-group">
-                    <label>Location</label>
-                    <input type="text" name="location" 
+                    <label>Location <span class="required">*</span></label>
+                    <input type="text" name="location" required
                            value="<?php echo isset($_POST['location']) ? htmlspecialchars($_POST['location']) : ''; ?>"
-                           placeholder="e.g., City Park">
+                           placeholder="Ex: City Park">
                 </div>
                 
                 <div class="form-group">

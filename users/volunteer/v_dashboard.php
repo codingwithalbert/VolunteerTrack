@@ -44,7 +44,9 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volunteer Dashboard - <?php echo SITE_NAME; ?></title>
-    <style>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <!-- <style>
         * {
             margin: 0;
             padding: 0;
@@ -238,12 +240,12 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
             background: #f8d7da;
             color: #721c24;
         }
-    </style>
+    </style> -->
 </head>
 <body>
     <div class="header">
         <div class="header-content">
-            <h1><?php echo SITE_NAME; ?></h1>
+            <h1><span class="logo-emoji">🤝</span><?php echo SITE_NAME; ?></h1>
             <div class="user-info">
                 <span>Welcome, <?php echo getUserFullName(); ?></span>
                 <div class="header-links">
@@ -266,7 +268,7 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
                     <h3><?php echo number_format((float)($stats['verified_hours'] ?? 0), 1); ?></h3>
                     <p>Verified Hours</p>
                 </div>
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon"></div>
             </div>
             
             <div class="stat-card">
@@ -274,7 +276,7 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
                     <h3><?php echo number_format((float)($stats['pending_hours'] ?? 0), 1); ?></h3>
                     <p>Pending Hours</p>
                 </div>
-                <div class="stat-icon">⏳</div>
+                <div class="stat-icon"></div>
             </div>
             
             <div class="stat-card">
@@ -282,7 +284,7 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
                     <h3><?php echo $stats['total_entries']; ?></h3>
                     <p>Total Entries</p>
                 </div>
-                <div class="stat-icon">📋</div>
+                <div class="stat-icon"></div>
             </div>
             
             <div class="stat-card">
@@ -290,7 +292,7 @@ $total_activities = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
                     <h3><?php echo $total_activities; ?></h3>
                     <p>Available Activities</p>
                 </div>
-                <div class="stat-icon">🎯</div>
+                <div class="stat-icon"></div>
             </div>
         </div>
         
