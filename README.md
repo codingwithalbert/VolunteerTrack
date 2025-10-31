@@ -186,4 +186,3 @@ Application Security
 ✅ CSRF protection - Session validation
 ✅ Input validation - Server-side validation
 ✅ Error handling - Secure error messages
-✅ File upload restrictions - N/A (no file uploads)
