@@ -18,18 +18,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $user_id = $_GET['id'];
 
-// Fetch user data
-$query = "SELECT * FROM users WHERE user_id = :user_id";
-$stmt = $db->prepare($query);
-$stmt->bindParam(':user_id', $user_id);
-$stmt->execute();
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$user) {
-    header('Location: manage_users.php');
-    exit();
-}
-
+// Handle form submission BEFORE fetching user data
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
@@ -38,67 +27,88 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $phone = trim($_POST['phone']);
     $address = trim($_POST['address']);
     $status = $_POST['status'];
-    $new_password = $_POST['new_password'];
+    $new_password = trim($_POST['new_password']);
     
+    // Validation
     if (empty($username) || empty($email) || empty($full_name) || empty($role)) {
         $error = 'Please fill in all required fields';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Invalid email format';
+    } elseif (!in_array($role, ['volunteer', 'coordinator', 'admin'])) {
+        $error = 'Invalid role selected';
     } else {
-        // Check if username or email exists for other users
-        $query = "SELECT user_id FROM users WHERE (username = :username OR email = :email) AND user_id != :user_id";
+        // Check duplicate username/email
+        $query = "SELECT user_id FROM users WHERE (username = ? OR email = ?) AND user_id != ?";
         $stmt = $db->prepare($query);
-        $stmt->bindParam(':username', $username);
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
+        $stmt->execute([$username, $email, $user_id]);
         
         if ($stmt->rowCount() > 0) {
             $error = 'Username or email already exists';
         } else {
-            // Update user
-            if (!empty($new_password)) {
-                if (strlen($new_password) < 6) {
-                    $error = 'Password must be at least 6 characters long';
-                } else {
+            try {
+                // Update query
+                if (!empty($new_password) && strlen($new_password) >= 6) {
+                    // With password
                     $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                    $query = "UPDATE users SET username = :username, email = :email, password = :password, 
-                              full_name = :full_name, role = :role, phone = :phone, address = :address, status = :status 
-                              WHERE user_id = :user_id";
+                    $query = "UPDATE users 
+                              SET username = ?, email = ?, password = ?, full_name = ?, 
+                                  role = ?, phone = ?, address = ?, status = ?
+                              WHERE user_id = ?";
                     $stmt = $db->prepare($query);
-                    $stmt->bindParam(':password', $hashed_password);
-                }
-            } else {
-                $query = "UPDATE users SET username = :username, email = :email, 
-                          full_name = :full_name, role = :role, phone = :phone, address = :address, status = :status 
-                          WHERE user_id = :user_id";
-                $stmt = $db->prepare($query);
-            }
-            
-            if (!isset($error)) {
-                $stmt->bindParam(':username', $username);
-                $stmt->bindParam(':email', $email);
-                $stmt->bindParam(':full_name', $full_name);
-                $stmt->bindParam(':role', $role);
-                $stmt->bindParam(':phone', $phone);
-                $stmt->bindParam(':address', $address);
-                $stmt->bindParam(':status', $status);
-                $stmt->bindParam(':user_id', $user_id);
-                
-                if ($stmt->execute()) {
-                    $success = 'User updated successfully!';
-                    // Refresh user data
-                    $query = "SELECT * FROM users WHERE user_id = :user_id";
-                    $stmt = $db->prepare($query);
-                    $stmt->bindParam(':user_id', $user_id);
-                    $stmt->execute();
-                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $result = $stmt->execute([
+                        $username, 
+                        $email, 
+                        $hashed_password, 
+                        $full_name, 
+                        $role, 
+                        $phone, 
+                        $address, 
+                        $status, 
+                        $user_id
+                    ]);
                 } else {
-                    $error = 'Failed to update user';
+                    // Without password
+                    $query = "UPDATE users 
+                              SET username = ?, email = ?, full_name = ?, 
+                                  role = ?, phone = ?, address = ?, status = ?
+                              WHERE user_id = ?";
+                    $stmt = $db->prepare($query);
+                    $result = $stmt->execute([
+                        $username, 
+                        $email, 
+                        $full_name, 
+                        $role, 
+                        $phone, 
+                        $address, 
+                        $status, 
+                        $user_id
+                    ]);
                 }
+                
+                if ($result && $stmt->rowCount() > 0) {
+                    $success = "User updated successfully! Role changed to: " . ucfirst($role);
+                } elseif ($result && $stmt->rowCount() == 0) {
+                    $success = "No changes were made (values were the same)";
+                } else {
+                    $error = "Failed to update user";
+                }
+                
+            } catch (PDOException $e) {
+                $error = "Database error: " . $e->getMessage();
             }
         }
     }
+}
+
+// Fetch user data (AFTER processing the update)
+$query = "SELECT * FROM users WHERE user_id = ?";
+$stmt = $db->prepare($query);
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user) {
+    header('Location: manage_users.php');
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -108,8 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit User - <?php echo SITE_NAME; ?></title>
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/modern-style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- <style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">    
+    <!--<style>
         * {
             margin: 0;
             padding: 0;
@@ -147,6 +157,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             padding: 8px 16px;
             border-radius: 5px;
             background: rgba(255,255,255,0.2);
+            transition: all 0.3s;
+        }
+        
+        .header-links a:hover {
+            background: rgba(255,255,255,0.3);
         }
         
         .container {
@@ -181,10 +196,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: white;
         }
         
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
         .btn-primary {
             background: #667eea;
             color: white;
             font-size: 16px;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
         }
         
         .card {
@@ -223,6 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .form-group textarea {
             resize: vertical;
             min-height: 100px;
+            font-family: inherit;
         }
         
         .form-group input:focus,
@@ -233,19 +257,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .alert {
-            padding: 15px;
+            padding: 15px 20px;
             border-radius: 5px;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .alert-success {
             background: #d4edda;
             color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-success::before {
+            content: '✓';
+            font-size: 20px;
+            font-weight: bold;
         }
         
         .alert-error {
             background: #f8d7da;
             color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-error::before {
+            content: '✗';
+            font-size: 20px;
+            font-weight: bold;
         }
         
         .form-actions {
@@ -258,6 +311,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 13px;
             color: #666;
             margin-top: 5px;
+        }
+        
+        .current-value {
+            display: inline-block;
+            background: #e7f3ff;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #0c5460;
         }
     </style> -->
 </head>
@@ -275,15 +338,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="container">
         <div class="page-header">
             <h2>Edit User</h2>
-            <a href="manage_users.php" class="btn btn-secondary">Back to Users</a>
+            <a href="manage_users.php" class="btn btn-secondary">← Back to Users</a>
         </div>
         
         <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo $error; ?></div>
+            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
         <?php if ($success): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
+            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
         
         <div class="card">
@@ -308,12 +371,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 <div class="form-group">
                     <label>New Password</label>
-                    <input type="password" name="new_password" minlength="6">
+                    <input type="password" name="new_password" minlength="6" autocomplete="new-password">
                     <div class="help-text">Leave blank to keep current password</div>
                 </div>
                 
                 <div class="form-group">
-                    <label>Role <span class="required">*</span></label>
+                    <label>Role <span class="required">*</span> 
+                        <span class="current-value">Current: <?php echo ucfirst($user['role']); ?></span>
+                    </label>
                     <select name="role" required>
                         <option value="volunteer" <?php echo ($user['role'] == 'volunteer') ? 'selected' : ''; ?>>Volunteer</option>
                         <option value="coordinator" <?php echo ($user['role'] == 'coordinator') ? 'selected' : ''; ?>>Coordinator</option>
@@ -333,7 +398,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
                 
                 <div class="form-group">
-                    <label>Status <span class="required">*</span></label>
+                    <label>Status <span class="required">*</span>
+                        <span class="current-value">Current: <?php echo ucfirst($user['status']); ?></span>
+                    </label>
                     <select name="status" required>
                         <option value="active" <?php echo ($user['status'] == 'active') ? 'selected' : ''; ?>>Active</option>
                         <option value="inactive" <?php echo ($user['status'] == 'inactive') ? 'selected' : ''; ?>>Inactive</option>

@@ -206,6 +206,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .form-group input::placeholder {
             color: #a0aec0;
         }
+
+        .forgot-password {
+            text-align: right;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+        
+        .forgot-password a {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .forgot-password a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
         
         .error {
             background: linear-gradient(135deg, #fee 0%, #fdd 100%);
@@ -373,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .toggle-password:hover svg {
             stroke: #667eea;
         }
-
+        
     </style>
 </head>
 <body>
@@ -397,7 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required autofocus placeholder="Enter your username">
             </div>
-            
+        
         <div class="form-group password-wrapper">
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required placeholder="Enter your password">
@@ -407,6 +426,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <circle cx="12" cy="12" r="3"/>
                 </svg>
             </button>
+        </div>
+
+        <div class="forgot-password">
+            <a href="forgot_password.php">Forgot Password?</a>
         </div>
 
             <button type="submit" class="btn-login">Sign In</button>
